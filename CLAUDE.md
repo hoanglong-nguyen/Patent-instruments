@@ -3,6 +3,30 @@
 Guideline for Claude Code. Read this whole file before acting. The pipeline script is
 `lens_bmm_pipeline.py` in this folder.
 
+## 0. Current design: WIPO only (approved 11 October 2026)
+
+The researcher replaced the Lens design. Lens `applicant.residence` is missing for most national
+filings (country sums cover 15–72% of world families), and Lens counts diverge from WIPO even in
+trend (2000–2023 log correlation −0.37 for CN and JP). Sections 1–8 describe the Lens pipeline,
+kept for the record only; the IL leftover stage (`blockC_IL`) will not be run.
+
+- **Script:** `wipo_shift_share.py` (offline). Input `wipo_patent_office_origin.csv`: WIPO IP
+  Statistics Data Center, indicator 1 "Total patent applications (direct and PCT national phase
+  entries)", filing office × applicant origin, 1980–2023, updated May 2026.
+- **Outcome (`wipo_pat_appl.csv`):** `pat_abroad` = applications filed by origin *c* at offices
+  not acting for *c* (national office plus OAPI/ARIPO/Eurasian office of which *c* is a member).
+  Chosen because many African home offices report in few years. `pat_total_wipo` and
+  `home_office_reported` are kept for robustness.
+- **Shares (`wipo_shares.csv`):** s_od = 1990–1999 abroad filings by *d* at offices acting for *o*,
+  divided by *d*'s 1990–1999 abroad filings.
+- **Instrument (`wipo_instrument.csv`):** Z_ot = Σ_d s_od × (d's abroad filings at t − lag,
+  excluding those into *o*). Columns for lag 1, lag 5 and the mean over lags 1–10.
+- **Known limits:** no instrument for CD, KH and PH (no reported 1990s inflows); OAPI members share
+  one office and ARIPO members largely share one, so their instruments are nearly identical;
+  very thin shares for MG, NP, ET, MU, MN and IQ; regional membership is current, not historical.
+- **Lens files** (`*.jsonl`, `lens_family_counts.csv`, Lens build outputs) are kept; do not delete
+  them without asking.
+
 ## 1. Context
 
 A PhD researcher (European Doctorate in Law and Economics) is building, from the Lens.org Patent API:
