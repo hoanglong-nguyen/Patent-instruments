@@ -54,6 +54,12 @@ kept for the record only; the IL leftover stage (`blockC_IL`) will not be run.
   api.imf.org; net exports/GDP weights, fixed weights; 97 of 102 Asian/African countries) in the
   GDP equation. It does not predict lnGDP with two-way FE (F ≈ 0.1; within-country SD of lnCTOT
   0.04), so it does not repair identification of the GDP and EF links.
+  Fourth run (`sem_lagged.py`): lagged GDP/EF as predetermined, lnPAT the only contemporaneous
+  endogenous regressor (instrument lnZ). Wooldridge test rejects no-AR(1) in the GDP equation, so
+  3SLS (which uses every system regressor as a moment for every equation, incl. lnGDP_{t-1}
+  against the GDP error) is contaminated and departs from 2SLS. Over-identified variants: Hansen J
+  rejects. In the strong-instrument sample (no thin shares; F 14–34) AR sets for lnPAT include 0
+  in both (1) and (2). GFN re-extraction (`gfn_api_v3.csv`) recovered no new countries.
 - **Lens files** (`*.jsonl`, `lens_family_counts.csv`, Lens build outputs) are kept; do not delete
   them without asking.
 
