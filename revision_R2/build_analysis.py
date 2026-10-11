@@ -55,6 +55,16 @@ def build():
          .merge(pd.read_stata("data/gfn.dta").rename(columns={"country_2d": "country_2d"}),
                 on=["country_2d", "year"]))
     d = d[d.year.between(2000, 2023)]
+    # [R2-17] WDI reports gross capital formation = 0 for Ethiopia in 2000-2010. Fill WDI zeros with
+    # PWT 11.0 national-accounts gross capital formation share, 100 * v_i / v_gdp (current national
+    # prices; same concept as WDI NE.GDI.TOTL.ZS; WDI/PWT ratio for Ethiopia 2011-2023 = 1.002).
+    na = pd.read_stata("data/pwt/pwt110_na_data.dta")
+    na["cap_pwt"] = 100 * na.v_i / na.v_gdp
+    na["country_2d"] = na.countrycode.map(lambda c: getattr(pycountry.countries.get(alpha_3=c), "alpha_2", None))
+    d = d.merge(na[["country_2d", "year", "cap_pwt"]], on=["country_2d", "year"], how="left")
+    d["cap_wdi"] = d.cap
+    d["cap_filled"] = ((d.cap == 0) & d.cap_pwt.notna()).astype(int)
+    d.loc[d.cap_filled == 1, "cap"] = d.cap_pwt
     d = d[~d.country_2d.isin(["CY", "TR"])]            # Europe in the researcher's iso.dta crosswalk
     d["continent_2d"] = np.where(d.country_2d.isin(ASIA), "AS", "AF")
     # exclusion rule of do_10.5: any missing on a model variable -> country dropped

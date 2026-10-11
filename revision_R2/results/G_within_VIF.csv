@@ -1,5 +1,5 @@
 equation,regressor,within_VIF
-GDP,lnef,1.05
+GDP,lnef,1.06
 GDP,cap,1.07
 GDP,hci,1.06
 GDP,lnpat,1.04

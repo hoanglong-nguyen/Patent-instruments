@@ -68,8 +68,11 @@ kept for the record only; the IL leftover stage (`blockC_IL`) will not be run.
   the data description; `data/` the new data files. Key findings: Asian PAT×INC robust in sign
   and size (leave-one-out, classifications, 3-year averages) but not significant with
   country-clustered inference (wild bootstrap p = 0.16); shift-share instrument weak for the
-  total patent stock, so patent coefficients are reported as associations; WDI CAP = 0 for
-  Ethiopia 2000–2010 and Table 2's PAT row is a flow — flagged for the researcher.
+  total patent stock, so patent coefficients are reported as associations; Table 2's PAT row is
+  a flow. Version 2: WDI CAP = 0 for Ethiopia 2000–2010 (confirmed by the researcher) is filled
+  from PWT 11.0 national accounts (100·v_i/v_gdp; `data/pwt/`, Dataverse doi:10.34894/FABVLR);
+  Asian results unchanged, pooled/African change (African EF eq. income F falls to 1.00).
+  `figures_R2.R` redraws Figures 1–3 on the estimation sample (bands = min–max range).
 - **Lens files** (`*.jsonl`, `lens_family_counts.csv`, Lens build outputs) are kept; do not delete
   them without asking.
 

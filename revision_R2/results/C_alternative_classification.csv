@@ -1,16 +1,16 @@
 classification,sample,higher_income,EF_lnpat,EF_patinc,ME_higher
-INC 2000 (paper),Pooled,BW IL JP KR MU MY ZA,-0.021** (0.008),-0.003 (0.003),-0.024*** (0.009)
+INC 2000 (paper),Pooled,BW IL JP KR MU MY ZA,-0.047*** (0.012),0.002 (0.002),-0.046*** (0.012)
 INC 2000 (paper),Asia,IL JP KR MY,0.009 (0.010),-0.086*** (0.026),-0.077*** (0.023)
-INC 2000 (paper),Africa,BW MU ZA,-0.013 (0.015),-0.011* (0.006),-0.024* (0.012)
-INC majority 2000-2004,Pooled,BW IL JP KR MU MY,-0.021** (0.008),-0.004 (0.003),-0.025*** (0.009)
+INC 2000 (paper),Africa,BW MU ZA,-0.106** (0.047),0.004 (0.014),-0.102*** (0.035)
+INC majority 2000-2004,Pooled,BW IL JP KR MU MY,-0.047*** (0.012),0.002 (0.002),-0.045*** (0.012)
 INC majority 2000-2004,Asia,IL JP KR MY,0.009 (0.010),-0.086*** (0.026),-0.077*** (0.023)
-INC majority 2000-2004,Africa,BW MU,-0.012 (0.015),-0.013** (0.006),-0.025** (0.012)
-INC 2005,Pooled,BW IL JP KR MU MY ZA,-0.021** (0.008),-0.003 (0.003),-0.024*** (0.009)
+INC majority 2000-2004,Africa,BW MU,-0.105** (0.047),0.005 (0.015),-0.100*** (0.034)
+INC 2005,Pooled,BW IL JP KR MU MY ZA,-0.047*** (0.012),0.002 (0.002),-0.046*** (0.012)
 INC 2005,Asia,IL JP KR MY,0.009 (0.010),-0.086*** (0.026),-0.077*** (0.023)
-INC 2005,Africa,BW MU ZA,-0.013 (0.015),-0.011* (0.006),-0.024* (0.012)
-"INC 2010 (mid-period, not predetermined)",Pooled,BW CN IL JP KR MU MY TH TN ZA,-0.024*** (0.007),0.005 (0.006),-0.019* (0.011)
+INC 2005,Africa,BW MU ZA,-0.106** (0.047),0.004 (0.014),-0.102*** (0.035)
+"INC 2010 (mid-period, not predetermined)",Pooled,BW CN IL JP KR MU MY TH TN ZA,-0.044*** (0.009),-0.006 (0.007),-0.050*** (0.015)
 "INC 2010 (mid-period, not predetermined)",Asia,CN IL JP KR MY TH,0.017** (0.008),-0.044*** (0.014),-0.028* (0.015)
-"INC 2010 (mid-period, not predetermined)",Africa,BW MU TN ZA,-0.009 (0.015),-0.013* (0.007),-0.022* (0.012)
-continuous: lnGDPpc 2000 (centred),Pooled,all,-0.022** (0.009),0.000 (0.001),slope varies with 2000 income
+"INC 2010 (mid-period, not predetermined)",Africa,BW MU TN ZA,-0.088* (0.051),-0.005 (0.019),-0.093*** (0.034)
+continuous: lnGDPpc 2000 (centred),Pooled,all,-0.047*** (0.013),-0.001 (0.002),slope varies with 2000 income
 continuous: lnGDPpc 2000 (centred),Asia,all,-0.004 (0.009),-0.017*** (0.005),slope varies with 2000 income
-continuous: lnGDPpc 2000 (centred),Africa,all,-0.006 (0.016),-0.009** (0.005),slope varies with 2000 income
+continuous: lnGDPpc 2000 (centred),Africa,all,-0.067 (0.058),-0.016 (0.018),slope varies with 2000 income

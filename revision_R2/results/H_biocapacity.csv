@@ -1,10 +1,10 @@
 specification,sample,GDP_lnef,GDP_lnpat,EF_lngdp,EF_patinc,ME_higher,note
-paper,Pooled,1.150*** (0.062),0.043*** (0.007),0.629*** (0.105),-0.003 (0.003),-0.024*** (0.009),3SLS
+paper,Pooled,1.134*** (0.062),0.043*** (0.007),1.023*** (0.161),0.002 (0.002),-0.046*** (0.012),3SLS
 paper,Asia,0.595*** (0.077),0.027*** (0.009),0.737*** (0.121),-0.086*** (0.026),-0.077*** (0.023),3SLS
-paper,Africa,1.181*** (0.117),0.078*** (0.009),0.323** (0.139),-0.011* (0.006),-0.024* (0.012),3SLS
-no lnBIO anywhere (EF control and GDP instrument),Pooled,1.260*** (0.195),0.039*** (0.010),0.483*** (0.123),-0.013 (0.009),-0.020** (0.010),3SLS
+paper,Africa,1.126*** (0.116),0.080*** (0.009),1.241*** (0.469),0.004 (0.014),-0.102*** (0.035),3SLS
+no lnBIO anywhere (EF control and GDP instrument),Pooled,1.360*** (0.210),0.035*** (0.010),1.062*** (0.281),0.013 (0.013),-0.037** (0.015),3SLS
 no lnBIO anywhere (EF control and GDP instrument),Asia,0.687*** (0.086),0.020** (0.009),0.764*** (0.128),-0.122*** (0.033),-0.106*** (0.029),3SLS
-no lnBIO anywhere (EF control and GDP instrument),Africa,0.236 (0.204),0.097*** (0.008),0.301*** (0.104),-0.022** (0.011),-0.022* (0.012),3SLS
-lnBIO as EF control only (not an instrument for lnEF),Pooled,1.649* (0.863),0.025 (0.035),0.629*** (0.105),-0.003 (0.003),-0.024*** (0.009),"GDP eq by FE-2SLS (clustered), instrument URB only"
+no lnBIO anywhere (EF control and GDP instrument),Africa,0.131 (0.209),0.098*** (0.008),0.355* (0.206),-0.021 (0.013),-0.026 (0.017),3SLS
+lnBIO as EF control only (not an instrument for lnEF),Pooled,1.771* (0.909),0.020 (0.036),1.023*** (0.161),0.002 (0.002),-0.046*** (0.012),"GDP eq by FE-2SLS (clustered), instrument URB only"
 lnBIO as EF control only (not an instrument for lnEF),Asia,1.448 (1.674),-0.023 (0.101),0.737*** (0.121),-0.086*** (0.026),-0.077*** (0.023),"GDP eq by FE-2SLS (clustered), instrument URB only"
-lnBIO as EF control only (not an instrument for lnEF),Africa,0.121 (0.441),0.099*** (0.021),0.323** (0.139),-0.011* (0.006),-0.024* (0.012),"GDP eq by FE-2SLS (clustered), instrument URB only"
+lnBIO as EF control only (not an instrument for lnEF),Africa,-0.050 (0.420),0.102*** (0.023),1.241*** (0.469),0.004 (0.014),-0.102*** (0.035),"GDP eq by FE-2SLS (clustered), instrument URB only"

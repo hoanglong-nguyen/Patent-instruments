@@ -6,6 +6,7 @@
 * New inputs (in $raw_data, see R2_data_description.docx):
 *   wipo_shiftshare_instrument.csv   shift-share instrument for PAT   [R2-4]
 *   imf_ctot.csv                     IMF commodity price indices      [cepi]
+*   pwt110_cap_national_prices.csv   PWT 11.0 gross capital formation share, national prices [R2-17]
 * User-written commands used by the new blocks [R2]:
 *   ssc install ivreg2, ranktest, ivreghdfe, reghdfe, weakiv, xtscc,
 *   ssc install xtdcce2, xthst, boottest, xtcd2, multipurt, outreg2
@@ -141,12 +142,23 @@ label variable inflow_90_99   "Foreign filings into the country's offices, 1990-
 save "$clear_data/instrument.dta", replace
 
 * ----------------------------------------------------------------
+**## [R2-17] CAP gap-fill: PWT 11.0 national-accounts gross capital formation share
+* ----------------------------------------------------------------
+* WDI (NE.GDI.TOTL.ZS) reports 0 for Ethiopia in 2000-2010. PWT 11.0 (pwt110_na_data.dta)
+* gives gross capital formation (v_i) and GDP (v_gdp) at current national prices; 100*v_i/v_gdp
+* is the same concept and equals WDI where both exist (Ethiopia 2011-2023: ratio 1.002;
+* all sample countries: correlation 0.93). Only WDI zeros are replaced.
+import delimited "$raw_data/pwt110_cap_national_prices.csv", clear varnames(1) encoding(UTF-8) stringcols(1 2)
+keep country_3d year cap_pwt
+label variable cap_pwt "Gross capital formation (% of GDP), PWT 11.0 national accounts"
+save "$clear_data/cap_pwt.dta", replace
+
+* ----------------------------------------------------------------
 **## [cepi] IMF Commodity Terms of Trade (only if clear.dta does not already contain cepi)
 * ----------------------------------------------------------------
-* The do_10.5 instrument set uses `cepi` but do_10.5 never creates it. If your cepi came
-* from another file, keep that and skip this block. Otherwise set the series below to the
-* one used in your revision of comments 1-3 (default: commodity export price index,
-* exports/GDP weights, fixed weights, 2012 = 100).
+* cepi is taken from the IMF CTOT data downloaded for this revision (imf_ctot.csv). If clear.dta
+* already contains cepi, the merge below is skipped. Default series: commodity export price
+* index, exports/GDP weights, fixed weights, 2012 = 100.
 import delimited "$raw_data/imf_ctot.csv", clear varnames(1) encoding(UTF-8) stringcols(1 2)
 gen double cepi = cepi_gdp_fw
 label variable cepi "IMF commodity export price index (exports/GDP weights, fixed weights)"
@@ -163,6 +175,13 @@ merge 1:1 country_2d year using "$clear_data/patent.dta", keep(match) nogen
 merge 1:1 country_3d year using "$clear_data/income.dta", keep(match) nogen
 keep if inlist(continent_2d, "AS", "AF")
 merge 1:1 country_3d year using "$clear_data/wdi.dta", keep(match) nogen
+merge 1:1 country_3d year using "$clear_data/cap_pwt.dta", keep(master match) nogen    // [R2-17]
+gen byte cap_filled = (cap == 0 & !missing(cap_pwt))                                    // [R2-17]
+replace cap = cap_pwt if cap_filled == 1                                                 // [R2-17] Ethiopia 2000-2010
+gen double cap_wdi = cap if cap_filled == 0                                              // [R2-17]
+replace cap_wdi = 0 if cap_filled == 1
+list country_3d year cap cap_pwt if cap_filled == 1, noobs                                // [R2-17] expect ETH 2000-2010
+drop cap_pwt
 merge 1:1 country_2d year using "$clear_data/gfn.dta", keep(match) nogen
 merge 1:1 country_3d year using "$clear_data/instrument.dta", keep(master match) nogen   // [R2-4] CD, KH, PH have no instrument
 capture confirm variable cepi                                                           // [cepi]
@@ -282,12 +301,13 @@ label variable pat_inc  "lnPAT × INC"
 keep id country_3d continent_2d year gdp ef bio cap hci urb pat pop inc_class ///
      lngdp lngdp_c lngdp_c2 lngdp_c3 lnef lnbio lnpat cap2 cap3 hci2 hci3 asia inc pat_inc cepi ///
      patstock patstock_abr pat_total lnpat_abr pat_inc_abr lnz lnz_inc z_mean_lag1_10 inflow_90_99 ///  [R2-4]
-     inc_early inc_2005 inc_2010 dev2000 pat_inc_early pat_inc_2005 pat_inc_2010 pat_dev             //  [R2-7]
+     inc_early inc_2005 inc_2010 dev2000 pat_inc_early pat_inc_2005 pat_inc_2010 pat_dev ///          [R2-7]
+     cap_wdi cap_filled                                                                              //  [R2-17]
 
-* [R2-14/17] Data check: WDI reports gross capital formation = 0 for Ethiopia in 2000-2010.
-*            This is not a plausible value; verify the WDI extract (NE.GDI.TOTL.ZS).
-*            Results without Ethiopia are reported in Section R2.11 below.
-list country_3d year cap if cap == 0, noobs
+* [R2-17] Main results now use CAP with Ethiopia 2000-2010 filled from PWT (see data block).
+*         Section R2.10 reports the as-submitted series (cap_wdi) and the sample without Ethiopia.
+*         NOTE: CAP enters Tables 7-12 and Appendix B (instrument for income), so the pooled and
+*         African columns of all these tables change; rerun the analyses for comments 1-3 too.
 order id country_3d continent_2d year
 xtset id year
 
@@ -772,13 +792,22 @@ foreach r in 1 0 {
 }
 
 * ----------------------------------------------------------------
-**## R2.10 [R2-14/17] Without Ethiopia (CAP = 0 in 2000-2010 in the WDI extract)
+**## R2.10 [R2-17] Ethiopia CAP: as submitted (WDI zeros) and without Ethiopia (Appendix D6)
 * ----------------------------------------------------------------
+foreach s in "1" "asia == 0" {
+    preserve
+    replace cap = cap_wdi                                         // as submitted
+    reg3 (GDP: lngdp_c lnef cap hci lnpat i.id i.year) ///
+         (EF:  lnef lngdp_c lnbio urb lnpat pat_inc i.id i.year) if `s', ///
+         endog(lngdp_c lnef)
+    outreg2 using "$results/R2_D6_ETH.xls", dec(3) ctitle(`s', WDI zeros)
+    restore
+}
 foreach s in "1" "asia == 0" {
     reg3 (GDP: lngdp_c lnef cap hci lnpat i.id i.year) ///
          (EF:  lnef lngdp_c lnbio urb lnpat pat_inc i.id i.year) if `s' & country_3d != "ETH", ///
          endog(lngdp_c lnef)
-    outreg2 using "$results/R2_D6_noETH.xls", dec(3) ctitle(`s', without ETH)
+    outreg2 using "$results/R2_D6_ETH.xls", dec(3) ctitle(`s', without ETH)
 }
 
 log close

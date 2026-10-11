@@ -1,13 +1,13 @@
 sample,test,chi2,df,p
-Pooled,H2 growth margin: [GDP]lnPAT = 0,36.85,1,0.0
-Pooled,Innovation unrelated to EF in both groups: [EF]lnPAT = [EF]PATxINC = 0,7.54,2,0.023
-Pooled,H3: [EF]PATxINC = 0,1.09,1,0.2974
-Pooled,"H2 dual role, higher income: [GDP]lnPAT = 0 & [EF]lnPAT+PATxINC = 0",37.43,2,0.0
+Pooled,H2 growth margin: [GDP]lnPAT = 0,35.46,1,0.0
+Pooled,Innovation unrelated to EF in both groups: [EF]lnPAT = [EF]PATxINC = 0,16.53,2,0.0003
+Pooled,H3: [EF]PATxINC = 0,0.45,1,0.5012
+Pooled,"H2 dual role, higher income: [GDP]lnPAT = 0 & [EF]lnPAT+PATxINC = 0",35.95,2,0.0
 Asia,H2 growth margin: [GDP]lnPAT = 0,8.35,1,0.0039
 Asia,Innovation unrelated to EF in both groups: [EF]lnPAT = [EF]PATxINC = 0,11.38,2,0.0034
 Asia,H3: [EF]PATxINC = 0,11.05,1,0.0009
 Asia,"H2 dual role, higher income: [GDP]lnPAT = 0 & [EF]lnPAT+PATxINC = 0",14.02,2,0.0009
-Africa,H2 growth margin: [GDP]lnPAT = 0,74.97,1,0.0
-Africa,Innovation unrelated to EF in both groups: [EF]lnPAT = [EF]PATxINC = 0,9.25,2,0.0098
-Africa,H3: [EF]PATxINC = 0,3.27,1,0.0706
-Africa,"H2 dual role, higher income: [GDP]lnPAT = 0 & [EF]lnPAT+PATxINC = 0",79.52,2,0.0
+Africa,H2 growth margin: [GDP]lnPAT = 0,75.17,1,0.0
+Africa,Innovation unrelated to EF in both groups: [EF]lnPAT = [EF]PATxINC = 0,19.69,2,0.0001
+Africa,H3: [EF]PATxINC = 0,0.08,1,0.7833
+Africa,"H2 dual role, higher income: [GDP]lnPAT = 0 & [EF]lnPAT+PATxINC = 0",75.17,2,0.0

@@ -16,7 +16,7 @@ the Stata do-file is the reference implementation for the final tables.
   J  Wild cluster bootstrap p-values for PAT x INC (few treated clusters)                   (R6, R8)
   K  Cluster-robust 3SLS standard errors (inside block E)                                (R9)
   L  Non-overlapping 3-year averages (researcher's request)                                (R1, R5)
-  M  Without Ethiopia (WDI reports CAP = 0 in 2000-2010)                                   (R17)
+  M  Ethiopia CAP: WDI zeros (as submitted) vs PWT-filled (main) vs Ethiopia dropped     (R17)
 """
 import os
 import sys
@@ -480,7 +480,10 @@ def block_L(d):
 # ---------------------------------------------------------------- M: Ethiopia (CAP = 0 in 2000-2010)
 def block_M(d):
     rows = []
-    for lab, s0 in [("43 countries (paper)", d), ("without Ethiopia (CAP = 0 in 2000-2010)", d[d.country_2d != "ET"])]:
+    sub = d.assign(cap=d.cap_wdi)                      # as submitted: WDI zeros for Ethiopia 2000-2010
+    for lab, s0 in [("as submitted: WDI CAP = 0 for Ethiopia 2000-2010", sub),
+                    ("main: Ethiopia 2000-2010 filled from PWT 11.0", d),
+                    ("without Ethiopia", d[d.country_2d != "ET"])]:
         for reg, s in REGIONS(s0).items():
             r = reg3(s, TABLE10)
             rows.append({"sample": lab, "region": reg, "GDP_lnef": cell(*coef(r, "GDP", "lnef")),
