@@ -6,13 +6,14 @@ standard errors clustered by country. Main instrument: mean over lags 1-10; lag 
 as robustness. Three samples:
   (i)   all origins with an instrument (40);
   (ii)  excluding thin shares (< 100 foreign filings into the origin's offices, 1990-1999);
-  (iii) (ii) and also excluding OAPI and ARIPO members (shared regional offices).
+  (iii) (ii) and also excluding OAPI, ARIPO and EPO members (shared regional offices).
 Each sample is run with and without CN, JP and KR: they account for 93% of pat_abroad, so they
 dominate PPML (which weights by levels), and they were outside the original share design.
 Two specifications: OLS on log(1 + y) with log(1 + Z), and PPML on y with log(1 + Z).
 F = squared cluster-robust t-statistic (single instrument).
 
-Usage:  python first_stage.py      (reads wipo_*.csv; writes first_stage_results.csv)
+Usage:  python first_stage.py               (43 origins; writes first_stage_results.csv)
+        python first_stage.py asia-africa   (extended sample; writes first_stage_results_aa.csv)
 """
 import numpy as np
 import pandas as pd
@@ -23,10 +24,10 @@ from wipo_shift_share import REGIONAL
 THIN = 100
 INSTR = {"mean lags 1-10": "z_mean_lag1_10", "lag 1": "z_lag1", "lag 5": "z_lag5"}
 
-def data():
+def data(tag=""):
     k = dict(keep_default_na=False, na_values=[""])
-    y = pd.read_csv("wipo_pat_appl.csv", **k)
-    z = pd.read_csv("wipo_instrument.csv", **k)
+    y = pd.read_csv(f"wipo_pat_appl{tag}.csv", **k)
+    z = pd.read_csv(f"wipo_instrument{tag}.csv", **k)
     d = y.merge(z, on=["country", "year"]).dropna(subset=["z_mean_lag1_10"])
     d["ly"] = np.log1p(d.pat_abroad)
     for v in INSTR.values():
@@ -34,18 +35,18 @@ def data():
     return d
 
 def samples(d):
-    shared = set(REGIONAL["OA"]) | set(REGIONAL["AP"])
+    shared = set(REGIONAL["OA"]) | set(REGIONAL["AP"]) | set(REGIONAL["EP"])   # TR, CY via EP
     ii = d[d.inflow_90_99 >= THIN]
     base = {"(i) all": d, "(ii) no thin shares": ii,
-            "(iii) no thin, no OAPI/ARIPO": ii[~ii.country.isin(shared)]}
+            "(iii) no thin, no OAPI/ARIPO/EPO": ii[~ii.country.isin(shared)]}
     out = {}
     for k, v in base.items():
         out[k] = v
         out[k + ", no CN/JP/KR"] = v[~v.country.isin(["CN", "JP", "KR"])]
     return out
 
-def main():
-    d = data()
+def main(tag=""):
+    d = data(tag)
     rows = []
     for sname, s in samples(d).items():
         for iname, v in INSTR.items():
@@ -60,9 +61,10 @@ def main():
                              "countries": s.country.nunique(), "obs": m._N,
                              "coef": m.coef().iloc[0], "se": m.se().iloc[0], "t": t, "F": t ** 2})
     r = pd.DataFrame(rows)
-    r.to_csv("first_stage_results.csv", index=False)
+    r.to_csv(f"first_stage_results{tag}.csv", index=False)
     with pd.option_context("display.width", 140, "display.float_format", "{:.3f}".format):
         print(r.to_string(index=False))
 
 if __name__ == "__main__":
-    main()
+    import sys
+    main("_aa" if sys.argv[1:] == ["asia-africa"] else "")

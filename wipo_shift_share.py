@@ -10,7 +10,7 @@ Input:  wipo_patent_office_origin.csv - WIPO IP Statistics Data Center, indicato
 
 Definitions (follow WIPO's resident / abroad split):
   * Offices acting for country c: its national office plus the regional offices it belongs to
-    (OAPI "OA", ARIPO "AP", Eurasian "EA"; current membership).
+    (OAPI "OA", ARIPO "AP", Eurasian "EA", Gulf "GC", European "EP"; current membership).
   * Abroad filings A_{c,t}: applications by origin c at all offices NOT acting for c.
     This is the outcome (option a): destination offices report consistently, whereas many
     African home offices report in only a few years.
@@ -21,7 +21,8 @@ Definitions (follow WIPO's resident / abroad split):
   * Instrument Z_{o,t} = sum_{d != o} s_{o,d} * A^{-o}_{d,t-lag}: predicted foreign filings into o.
     Reported for lag 1, lag 5 and the mean over lags 1-10.
 
-Usage:  python wipo_shift_share.py      (offline; writes wipo_*.csv)
+Usage:  python wipo_shift_share.py               (43 origins; writes wipo_*.csv)
+        python wipo_shift_share.py asia-africa   (all 102 Asian/African origins; wipo_*_aa.csv)
 """
 import warnings
 import pandas as pd
@@ -35,7 +36,20 @@ REGIONAL = {"OA": ["BJ", "BF", "CF", "CI", "CM", "CG", "ML", "NE", "SN", "TG", "
                    "KM", "MR", "TD"],
             "AP": ["BW", "CV", "SZ", "GM", "GH", "KE", "LS", "LR", "MW", "MZ", "NA", "RW", "ST", "SC",
                    "SL", "SO", "SD", "TZ", "UG", "ZM", "ZW"],
-            "EA": ["AM", "AZ", "BY", "KZ", "KG", "RU", "TJ", "TM"]}
+            "EA": ["AM", "AZ", "BY", "KZ", "KG", "RU", "TJ", "TM"],
+            "GC": ["AE", "BH", "KW", "OM", "QA", "SA"],
+            "EP": ["AL", "AT", "BE", "BG", "CH", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "GB",
+                   "GR", "HR", "HU", "IE", "IS", "IT", "LI", "LT", "LU", "LV", "MC", "ME", "MK", "MT",
+                   "NL", "NO", "PL", "PT", "RO", "RS", "SE", "SI", "SK", "SM", "TR"]}
+# UN M49 Africa and Asia (for the extended sample; TW, PS, EH, YT, RE, GQ, SH are not WIPO origins)
+AFRICA = ["DZ", "EG", "LY", "MA", "SD", "TN", "BI", "KM", "DJ", "ER", "ET", "KE", "MG", "MW", "MU",
+          "MZ", "RW", "SC", "SO", "SS", "UG", "TZ", "ZM", "ZW", "AO", "CM", "CF", "TD", "CG", "CD",
+          "GA", "ST", "BW", "SZ", "LS", "NA", "ZA", "BJ", "BF", "CV", "CI", "GM", "GH", "GN", "GW",
+          "LR", "ML", "MR", "NE", "NG", "SN", "SL", "TG"]
+ASIA = ["KZ", "KG", "TJ", "TM", "UZ", "CN", "HK", "MO", "KP", "JP", "MN", "KR", "BN", "KH", "ID", "LA",
+        "MY", "MM", "PH", "SG", "TH", "TL", "VN", "AF", "BD", "BT", "IN", "IR", "MV", "NP", "PK", "LK",
+        "AM", "AZ", "BH", "CY", "GE", "IQ", "IL", "JO", "KW", "LB", "OM", "QA", "SA", "SY", "TR", "AE",
+        "YE"]
 PRE = range(1990, 2000)
 YEARS = range(2000, 2024)
 LAGS = range(1, 11)
@@ -74,7 +88,7 @@ def acting(c):
     """Offices acting for country c: national office plus regional offices it belongs to."""
     return {c} | {r for r, members in REGIONAL.items() if c in members}
 
-def main():
+def main(origins=ORIGIN, tag=""):
     d = load()
     d["abroad"] = [o not in acting(c) for o, c in zip(d.office, d.origin)]
     A = d[d.abroad].groupby(["origin", "year"]).n.sum()             # abroad filings by origin-year
@@ -84,18 +98,18 @@ def main():
 
     # Outcome (option a), with the WIPO total and a home-office reporting flag for robustness
     out = []
-    for c in ORIGIN:
+    for c in origins:
         for t in YEARS:
             out.append({"country": c, "year": t, "pat_abroad": A.get((c, t), 0.0),
                         "pat_total_wipo": T.get((c, t), 0.0),
                         "home_office_reported": int(any((o, t) in reported for o in acting(c)))})
-    pd.DataFrame(out).to_csv("wipo_pat_appl.csv", index=False)
+    pd.DataFrame(out).to_csv(f"wipo_pat_appl{tag}.csv", index=False)
 
     # Shares from 1990-1999 inflows into offices acting for o
     pre = d[d.year.isin(PRE)]
     A_pre = A[A.index.get_level_values("year").isin(PRE)].groupby("origin").sum()
     shares, inst = [], []
-    for o in ORIGIN:
+    for o in origins:
         offs = acting(o)
         # abroad filings only: a co-member's filing at a shared regional office is resident for it
         F = pre[pre.office.isin(offs) & (pre.origin != o) & pre.abroad].groupby("origin").n.sum()
@@ -114,9 +128,13 @@ def main():
                          "z_mean_lag1_10": (sum(z.values()) / len(LAGS)) if s else None,
                          "inflow_90_99": float(F.sum()), "n_source_countries": len(s),
                          "office_years_reported_90_99": yrs_rep,
-                         "shared_regional_office": "OA" if "OA" in offs else ""})
-    pd.DataFrame(shares).to_csv("wipo_shares.csv", index=False)
-    pd.DataFrame(inst).to_csv("wipo_instrument.csv", index=False)
+                         "regional_office": " ".join(sorted(offs - {o}))})
+    pd.DataFrame(shares).to_csv(f"wipo_shares{tag}.csv", index=False)
+    pd.DataFrame(inst).to_csv(f"wipo_instrument{tag}.csv", index=False)
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if sys.argv[1:] == ["asia-africa"]:          # all Asian and African WIPO origins -> *_aa.csv
+        main(AFRICA + ASIA, "_aa")
+    else:
+        main()

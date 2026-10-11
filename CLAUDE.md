@@ -31,6 +31,15 @@ kept for the record only; the IL leftover stage (`blockC_IL`) will not be run.
   country. With CN/JP/KR (93% of `pat_abroad`) the instrument is weak (F ≈ 4–6) and PPML has the
   wrong sign. Without CN/JP/KR: PPML F ≈ 40–46 in samples (i)–(ii); OLS-log F ≈ 5 in (i),
   11–19 in (ii); sample (iii) has only 12 clusters, so its F is unreliable.
+- **Regional offices** acting for a country now include the EPO ("EP") and the GCC office ("GC")
+  as well as OAPI, ARIPO and Eurasian (current membership; TR joined the EPO in 2000 and CY in
+  1998, so their 1990s EP-based shares overstate exposure).
+- **Extended sample:** `python wipo_shift_share.py asia-africa` and `python first_stage.py
+  asia-africa` cover all 102 UN-M49 Asian and African WIPO origins (`*_aa.csv`; availability in
+  `wipo_availability_aa.csv`). 75 have an instrument. Without CN/JP/KR: PPML F ≈ 55–57,
+  OLS-log F ≈ 10–11. Not yet adopted as the study sample: the researcher decides.
+- **No covariates:** first stages use only WIPO data and two-way fixed effects; no income,
+  GDP or population data are in the project.
 - **Lens files** (`*.jsonl`, `lens_family_counts.csv`, Lens build outputs) are kept; do not delete
   them without asking.
 
