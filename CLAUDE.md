@@ -60,6 +60,16 @@ kept for the record only; the IL leftover stage (`blockC_IL`) will not be run.
   against the GDP error) is contaminated and departs from 2SLS. Over-identified variants: Hansen J
   rejects. In the strong-instrument sample (no thin shares; F 14–34) AR sets for lnPAT include 0
   in both (1) and (2). GFN re-extraction (`gfn_api_v3.csv`) recovered no new countries.
+- **Revision R2 (`revision_R2/`, 11 October 2026):** answers Reviewer 1's comments 4–18 on the
+  researcher's manuscript (3SLS EKC–innovation system, 43 countries, 2000–2023 — period fixed by
+  the researcher). `build_analysis.py` replicates the researcher's `analysis.dta` (Table 10
+  reproduced within 0.003); `r2_analyses.py` writes `results/*.csv`; `do_10.6.do` is the
+  researcher's do-file with every change tagged `[R2-#]`; `docs/` holds the Word guidance and
+  the data description; `data/` the new data files. Key findings: Asian PAT×INC robust in sign
+  and size (leave-one-out, classifications, 3-year averages) but not significant with
+  country-clustered inference (wild bootstrap p = 0.16); shift-share instrument weak for the
+  total patent stock, so patent coefficients are reported as associations; WDI CAP = 0 for
+  Ethiopia 2000–2010 and Table 2's PAT row is a flow — flagged for the researcher.
 - **Lens files** (`*.jsonl`, `lens_family_counts.csv`, Lens build outputs) are kept; do not delete
   them without asking.
 

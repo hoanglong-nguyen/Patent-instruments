@@ -1,0 +1,5 @@
+sample,group,countries,CCE-MG lnPAT on lnEF,country slopes
+Asia,lower income,13,-0.051 (0.055),BD:-0.062 CN:0.171 ID:0.016 IN:0.036 IQ:-0.085 KH:-0.018 MN:-0.276 NP:0.038 PH:0.156 PK:0.167 TH:-0.532 TJ:-0.042 VN:-0.237
+Asia,higher income,4,-0.261* (0.084),IL:-0.353 JP:-0.011 KR:-0.356 MY:-0.324
+Africa,lower income,23,-0.001 (0.025),BF:-0.014 BJ:-0.147 CD:-0.007 CF:0.006 CG:0.024 CI:0.032 CM:-0.026 EG:-0.463 ET:0.005 GH:-0.022 KE:0.221 MG:0.099 ML:0.029 MZ:-0.002 NE:0.048 RW:0.021 SL:0.007 SN:-0.008 TG:0.023 TN:0.049 TZ:-0.004 UG:0.015 ZW:0.089
+Africa,higher income,3,-0.246 (0.157),BW:-0.056 MU:-0.126 ZA:-0.557

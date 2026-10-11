@@ -1,0 +1,4 @@
+sample,model,coef PATxINC,CRV1 t,"conventional p (t, G-1 df)","WCR bootstrap p (Webb, 9999)",clusters,treated clusters
+Pooled,"EF equation, two-way FE",-0.031,-1.07,0.2886,0.4507,43,7
+Asia,"EF equation, two-way FE",-0.093,-1.66,0.1168,0.1606,17,4
+Africa,"EF equation, two-way FE",-0.019,-0.66,0.5178,0.822,26,3
