@@ -50,6 +50,10 @@ kept for the record only; the IL leftover stage (`blockC_IL`) will not be run.
   `accounts == 1` rows, so the sample ends in 2022). Adding AGE (and TRADE) to the GDP equation
   does not raise first-stage strength, and Hansen J then rejects in (2) and (3). The shift-share
   instrument alone is adequate for lnPAT in this sample (F ≈ 11–25 with FE and controls).
+  Third run: IMF commodity terms of trade (`fetch_ctot.py`, IMF.RES:CTOT 5.0.1 via
+  api.imf.org; net exports/GDP weights, fixed weights; 97 of 102 Asian/African countries) in the
+  GDP equation. It does not predict lnGDP with two-way FE (F ≈ 0.1; within-country SD of lnCTOT
+  0.04), so it does not repair identification of the GDP and EF links.
 - **Lens files** (`*.jsonl`, `lens_family_counts.csv`, Lens build outputs) are kept; do not delete
   them without asking.
 

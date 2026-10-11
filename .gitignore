@@ -5,3 +5,4 @@ __pycache__/
 lens_page_size.txt
 block_C_check.json
 *.dta
+data/

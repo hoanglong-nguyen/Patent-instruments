@@ -24,6 +24,7 @@ Data (data/*.dta, supplied by the researcher; levels, logged here):
        (data/gfn_api.csv, National Footprint Accounts rows only, so the sample ends in 2022)
   PAT  WIPO applications filed abroad (wipo_pat_appl*.csv); lnPAT = ln(1 + PAT)
   Z    wipo_instrument*.csv; lnZ = ln(1 + Z)
+  CTOT IMF commodity terms of trade (fetch_ctot.py -> data/imf/ctot.csv)
 
 Usage:  python sem_estimation.py      (writes sem_results.csv and sem_diagnostics.csv)
 """
@@ -46,7 +47,12 @@ def eqs(gdp_extra=()):
 # Specifications: AGE (age dependency ratio) and lnTRADE (trade, % of GDP) enter the GDP
 # equation only, so they are excluded instruments for lnGDP in (2) and (3). lnTRADE is reported
 # with caution: openness may respond to the footprint (researcher's concern).
-SPECS = {"base": eqs(), "+AGE": eqs(["AGE"]), "+AGE+TRADE": eqs(["AGE", "lnTRADE"])}
+# lnCTOT: IMF commodity net export price index (Gruss and Kebhaj 2019), net exports / GDP weights,
+# fixed weights (main); trade-weighted and rolling-weight versions as robustness. Common deflators
+# (e.g. MUV) are absorbed by the year effects.
+SPECS = {"base": eqs(), "+AGE": eqs(["AGE"]), "+AGE+TRADE": eqs(["AGE", "lnTRADE"]),
+         "+CTOT": eqs(["lnCTOT"]), "+CTOT trade-wt": eqs(["lnCTOT_TT"]),
+         "+CTOT rolling-wt": eqs(["lnCTOT_RW"])}
 EQS = SPECS["base"]
 
 def exog_all(eq):
@@ -72,12 +78,15 @@ def panel(tag="_aa"):
     d = (w.merge(g, on=["country", "year"], how="left")
           .merge(by3("wdi", ["gdp", "cap", "urb", "age", "trade"]), on=["country", "year"], how="left")
           .merge(by3("pwt", ["hci", "pop"]), on=["country", "year"], how="left")
-          .merge(by3("income", ["inc_class"]), on=["country", "year"], how="left"))
+          .merge(by3("income", ["inc_class"]), on=["country", "year"], how="left")
+          .merge(pd.read_csv("data/imf/ctot.csv", keep_default_na=False, na_values=[""])
+                 .drop(columns="country_3d"), on=["country", "year"], how="left"))
     d["lnGDP"], d["lnEF"], d["lnBIO"] = np.log(d.gdp), np.log(d.ef), np.log(d.bio)
     d["lnCAP"], d["HCI"], d["URB"] = np.log(d.cap.where(d.cap > 0)), d.hci, d.urb
     d["lnPAT"], d["lnZ"] = np.log1p(d.pat_abroad), np.log1p(d.z_mean_lag1_10)
     d["lnPATpc"] = np.log1p(d.pat_abroad / d["pop"])           # per million people (robustness)
     d["AGE"], d["lnTRADE"] = d.age, np.log(d.trade.where(d.trade > 0))
+    d["lnCTOT"], d["lnCTOT_TT"], d["lnCTOT_RW"] = np.log(d.ctot_gdp_fw), np.log(d.ctot_tt_fw), np.log(d.ctot_gdp_rw)
     return d
 
 def common(d, eq=EQS):
