@@ -40,6 +40,12 @@ kept for the record only; the IL leftover stage (`blockC_IL`) will not be run.
   OLS-log F ≈ 10–11. Not yet adopted as the study sample: the researcher decides.
 - **No covariates:** first stages use only WIPO data and two-way fixed effects; no income,
   GDP or population data are in the project.
+- **SEM (`sem_estimation.py` → `sem_results.csv`, `sem_diagnostics.csv`):** three equations
+  (lnGDP, lnEF, lnPAT; lnPAT enters (1) and (2); lnZ only in (3)), FE-2SLS and 3SLS with country
+  and year dummies, SE clustered by country. Data in `data/*.dta` (researcher's WDI, PWT, GFN,
+  income class; not committed). First run (11 October 2026): identification weak (Sanderson-
+  Windmeijer F mostly < 5) and Hansen J rejects in (1) and (3) in the main sample; results are
+  not yet defensible. Do not tune specifications to obtain significant coefficients.
 - **Lens files** (`*.jsonl`, `lens_family_counts.csv`, Lens build outputs) are kept; do not delete
   them without asking.
 
