@@ -75,6 +75,16 @@ def post(url, body):
 def records_left():
     return int(LIMITS.get("x-rate-limit-remaining-record-per-month", 0))
 
+def read_counts(path="lens_family_counts.csv"):
+    # keep_default_na=False: otherwise pandas reads Namibia's code "NA" as missing
+    return pd.read_csv(path, keep_default_na=False, na_values=[""])
+
+def ok(r):
+    """Stop with the exact API error message (raise_for_status drops the response body)."""
+    if r.status_code != 200:
+        sys.exit(f"HTTP {r.status_code} from {r.url}: {r.text}")
+    return r
+
 def prio(gte, lte):
     return {"range": {"earliest_priority_claim_date": {"gte": gte, "lte": lte}}}
 
@@ -96,13 +106,13 @@ def agg_years(cc, y0, y1):
         out = agg_years(cc, y0, mid)
         out.update(agg_years(cc, mid + 1, y1))
         return out
-    r.raise_for_status()
+    ok(r)
     by_year = (r.json().get("aggregations") or {}).get("by_year") or {}
     # Lens returns {"2010": {"doc_count": 64, "families": 30}, ...}
     return {int(y): (v["doc_count"], v["families"]) for y, v in by_year.items()}
 
 def block_A(path="lens_family_counts.csv"):
-    done = set(pd.read_csv(path)["country"]) if os.path.exists(path) else set()
+    done = set(read_counts(path)["country"]) if os.path.exists(path) else set()
     for cc in ALL_COUNTRIES + [None]:
         name = cc or "WORLD"
         if name in done:
@@ -120,7 +130,7 @@ def block_A(path="lens_family_counts.csv"):
 # --------------------------------------------------------------------------------------
 def count(query):
     r = post(SEARCH, {"query": query, "size": 0})
-    r.raise_for_status()
+    ok(r)
     return r.json()["total"]
 
 PAGE = None
@@ -147,7 +157,7 @@ def scroll(query, path, fields):
             r = post(SEARCH, body)
             if r.status_code in (204, 404):
                 break
-            r.raise_for_status()
+            ok(r)
             d = r.json()
             if not d.get("data"):
                 break
@@ -235,7 +245,7 @@ def fam_info(path):
     return out
 
 def build():
-    N = pd.read_csv("lens_family_counts.csv").dropna(subset=["year"])
+    N = read_counts().dropna(subset=["year"])
     N["year"] = N["year"].astype(int)
     Ni = N.set_index(["country", "year"])["families"]
 
@@ -280,8 +290,9 @@ def build():
             pred.append({"country": co, "year": t, "pat_appl_hat": val})
     pd.DataFrame(pred).to_csv("shift_share_instrument.csv", index=False)
 
-    pat = N[N.country.isin(ORIGIN) & N.year.between(2000, 2023)][["country", "year", "families"]]
-    pat.rename(columns={"families": "pat_appl"}).to_csv("pat_appl.csv", index=False)
+    grid = pd.MultiIndex.from_product([ORIGIN, range(2000, 2024)], names=["country", "year"])
+    pat = Ni.reindex(grid, fill_value=0).rename("pat_appl").reset_index()
+    pat.to_csv("pat_appl.csv", index=False)
 
     world = N[N.country == "WORLD"].set_index("year")["families"]
     summed = N[N.country != "WORLD"].groupby("year")["families"].sum()
