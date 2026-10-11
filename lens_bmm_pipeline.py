@@ -9,6 +9,10 @@ Design decisions (11 October 2026):
   * Block B (citing records, priority 1990-1999): origin countries EXCLUDING CN, JP, KR.
   * Block C (cited records): only cited documents with earliest priority 1980-1998 (filtered server-side,
     so out-of-window citations cost no record allowance).
+  * IL excluded from share estimation (approved 11 October 2026): Block C as designed (~69-85k records)
+    exceeds the ~30k records that the remaining search requests allow at the trial's page size of 100.
+    IL stays in Block B, in pat_appl and in Block A (as a destination). Documents cited only by IL
+    families are fetched afterwards with any leftover requests (blockC_IL, exploratory only).
 
 Limits observed on the trial (check headers before running):
   Search API:      1,000 requests / month, 100,000 records / month, 10 requests / minute.
@@ -22,7 +26,8 @@ Usage:  export LENS_TOKEN=...   (never hard-code the token)
         python lens_bmm_pipeline.py check       # size-0 volume check for B (no records used)
         python lens_bmm_pipeline.py blockB
         python lens_bmm_pipeline.py checkC      # size-0 volume check for C (no records used)
-        python lens_bmm_pipeline.py blockC
+        python lens_bmm_pipeline.py blockC      # uses the checkC result; does not re-count
+        python lens_bmm_pipeline.py blockC_IL   # leftover requests -> IL-only cited docs, until Lens stops
         python lens_bmm_pipeline.py build       # shares + instrument (offline)
 """
 import os, sys, json, time
@@ -40,6 +45,8 @@ ORIGIN = ["BJ", "BF", "BD", "BW", "CF", "CN", "CI", "CM", "CD", "CG", "EG", "ET"
           "PH", "RW", "SN", "SL", "TG", "TH", "TJ", "TN", "TZ", "UG", "VN", "ZA", "ZW"]
 BLOCKB_EXCLUDE = {"CN", "JP", "KR"}
 BLOCKB_ORIGIN = [c for c in ORIGIN if c not in BLOCKB_EXCLUDE]
+SHARE_EXCLUDE = BLOCKB_EXCLUDE | {"IL"}   # IL: downloaded in Block B, but no shares (budget; see docstring)
+SHARE_ORIGIN = [c for c in ORIGIN if c not in SHARE_EXCLUDE]
 
 try:                                      # all ISO-2 codes as destinations
     import pycountry
@@ -68,9 +75,15 @@ def post(url, body):
             if k.lower().startswith("x-rate-limit-"):
                 LIMITS[k.lower()] = v
         if r.status_code == 429:
+            if "0" in (LIMITS.get("x-rate-limit-remaining-request-per-month"),
+                       LIMITS.get("x-rate-limit-remaining-record-per-month")):
+                return r                  # monthly quota exhausted: waiting will not help
             time.sleep(int(r.headers.get("x-rate-limit-retry-after-seconds", 60)) + 1)
             continue
         return r
+
+def requests_left():
+    return int(LIMITS.get("x-rate-limit-remaining-request-per-month", 0))
 
 def records_left():
     return int(LIMITS.get("x-rate-limit-remaining-record-per-month", 0))
@@ -134,10 +147,15 @@ def count(query):
     return r.json()["total"]
 
 PAGE = None
+PAGE_FILE = "lens_page_size.txt"
 def page_size():
-    """Largest page the plan accepts; tested once on a tiny query (costs <= ~100 records)."""
+    """Largest page the plan accepts; tested once on a tiny query (costs <= ~100 records),
+    then cached in PAGE_FILE so later steps do not spend requests re-testing it."""
     global PAGE
     if PAGE:
+        return PAGE
+    if os.path.exists(PAGE_FILE):
+        PAGE = int(open(PAGE_FILE).read())
         return PAGE
     for s in (1000, 500, 250, 100):
         r = post(SEARCH, {"query": {"bool": {"filter": [{"term": {"applicant.residence": "BJ"}},
@@ -145,6 +163,7 @@ def page_size():
                           "include": ["lens_id"], "size": s, "scroll": "1m"})
         if r.status_code == 200:
             PAGE = s
+            open(PAGE_FILE, "w").write(str(s))
             print("page size", s)
             return s
     sys.exit("No page size accepted: " + r.text)
@@ -190,34 +209,69 @@ def block_B(path="block_B.jsonl"):
 # Block C: cited documents, restricted server-side to priority 1980-1998
 # --------------------------------------------------------------------------------------
 def cited_ids(path="block_B.jsonl"):
-    ids = set()
-    for line in open(path):
-        r = json.loads(line)
-        for c in r.get("biblio", {}).get("references_cited", {}).get("citations", []):
-            lid = (c.get("patcit") or {}).get("lens_id")
-            if lid:
-                ids.add(lid)
-    return sorted(ids)
+    """Distinct documents cited by Block B families, split by whether they are needed for shares.
+
+    Uses the same family grouping as build(): `main` = cited by a family with at least one
+    SHARE_ORIGIN applicant; `il_only` = all other cited documents (cited only by IL families)."""
+    main, all_refs = set(), set()
+    for f in fam_info(path).values():
+        all_refs |= f["refs"]
+        if set(f["countries"]) & set(SHARE_ORIGIN):
+            main |= f["refs"]
+    return sorted(main), sorted(all_refs - main)
 
 def q_C(chunk):
     return {"bool": {"filter": [{"terms": {"lens_id": chunk}}, prio("1980-01-01", "1998-12-31")]}}
 
-def chunks(ids, k=10000):                  # Lens: <= 10,000 values per terms query
+def chunks(ids, k=10000):                  # Lens: <= 10,000 values per terms query (unverified)
     return [ids[i:i + k] for i in range(0, len(ids), k)]
 
+CHECK_C = "block_C_check.json"
+
 def check_C():
-    ids = cited_ids()
-    n = sum(count(q_C(ch)) for ch in chunks(ids))
-    print(len(ids), "distinct cited docs;", n, "in priority window | records left", records_left())
+    main, il_only = cited_ids()
+    per_chunk = [count(q_C(ch)) for ch in chunks(main)]
+    n = sum(per_chunk)
+    pages = sum(-(-c // page_size()) + 1 for c in per_chunk if c)   # pages + one closing call per chunk
+    res = {"distinct_main": len(main), "distinct_il_only": len(il_only), "per_chunk": per_chunk,
+           "in_window": n, "est_requests": pages,
+           "records_left": records_left(), "requests_left": requests_left()}
+    json.dump(res, open(CHECK_C, "w"), indent=1)
+    print(len(main), "distinct cited docs (", len(il_only), "more cited only by IL );", n,
+          "in priority window; about", pages, "requests to download | records left", records_left(),
+          "| requests left", requests_left())
     return n
 
 def block_C(path="block_C.jsonl"):
-    need = check_C()
-    if need > records_left() - RECORD_RESERVE:
-        sys.exit("Block C exceeds the remaining record allowance. Options: drop IL from Block B, "
-                 "or narrow the citation-lag window.")
-    for ch in chunks(cited_ids()):
-        print(scroll(q_C(ch), path, FIELDS_C), "records")
+    """Download Block C using the counts saved by checkC (no second count step)."""
+    if not os.path.exists(CHECK_C):
+        sys.exit("Run checkC first.")
+    chk = json.load(open(CHECK_C))
+    main, _ = cited_ids()
+    if len(main) != chk["distinct_main"]:
+        sys.exit("block_B.jsonl changed since checkC; rerun checkC.")
+    if chk["in_window"] > chk["records_left"] - RECORD_RESERVE:
+        sys.exit("Block C exceeds the remaining record allowance; stop.")
+    if chk["est_requests"] > chk["requests_left"]:
+        sys.exit("Block C needs more search requests than remain; stop.")
+    for ch, c in zip(chunks(main), chk["per_chunk"]):
+        if c:                                # skip chunks with nothing in the window
+            print(scroll(q_C(ch), path, FIELDS_C), "records of", c,
+                  "|", requests_left(), "requests left")
+
+def block_C_IL(path="block_C_IL.jsonl"):
+    """Leftover stage: documents cited only by IL families, until Lens stops (exploratory only)."""
+    if not os.path.exists("block_C.jsonl"):
+        sys.exit("Run blockC first: the leftover stage must not compete with Block C.")
+    _, il_only = cited_ids()
+    try:
+        for ch in chunks(il_only):
+            scroll(q_C(ch), path, FIELDS_C)
+            print(sum(1 for _ in open(path)), "IL records so far |", requests_left(),
+                  "requests left |", records_left(), "records left")
+    finally:                                 # also runs when Lens refuses (sys.exit in ok())
+        n = sum(1 for _ in open(path)) if os.path.exists(path) else 0
+        print("blockC_IL stopped with", n, "records of", len(il_only), "IL-only cited docs")
 
 # --------------------------------------------------------------------------------------
 # Build: family-level shares and the single-step shift-share instrument
@@ -258,7 +312,7 @@ def build():
         cfams = {doc2fam[d] for d in f["refs"] if d in doc2fam}
         if not t or not f["countries"] or not cfams:
             continue
-        for co in set(f["countries"]) & set(BLOCKB_ORIGIN):
+        for co in set(f["countries"]) & set(SHARE_ORIGIN):
             w_o = f["countries"].count(co) / len(f["countries"])
             for cf in cfams:
                 g = cited_f[cf]
@@ -285,7 +339,7 @@ def build():
     for co in ORIGIN:
         for t in range(2000, 2024):
             val = None
-            if co in BLOCKB_ORIGIN:   # CN, JP, KR have no estimated shares -> instrument missing
+            if co in SHARE_ORIGIN:    # CN, JP, KR, IL have no estimated shares -> instrument missing
                 val = sum(s * Ni.get((cd, t - lag), 0) for (o, cd, lag), s in m.items() if o == co)
             pred.append({"country": co, "year": t, "pat_appl_hat": val})
     pd.DataFrame(pred).to_csv("shift_share_instrument.csv", index=False)
@@ -301,5 +355,5 @@ def build():
 
 if __name__ == "__main__":
     {"counts": block_A, "check": check_B, "blockB": block_B,
-     "checkC": check_C, "blockC": block_C, "build": build}[sys.argv[1]]()
+     "checkC": check_C, "blockC": block_C, "blockC_IL": block_C_IL, "build": build}[sys.argv[1]]()
     print("limits:", LIMITS)

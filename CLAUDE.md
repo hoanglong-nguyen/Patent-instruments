@@ -32,10 +32,13 @@ The work is non-commercial academic research. Lens must be credited as the data 
 | Block A (counts) | All countries + world, priority 1980–2023, Aggregation API |
 | Block B (citing records) | Origin countries **excluding CN, JP, KR**, priority 1990–1999 |
 | Block C (cited records) | Documents cited by Block B, filtered server-side to priority 1980–1998 |
+| Share origins | Block B origins **excluding IL** (39 countries; approved 11 October 2026) |
 | Shares | Citation lags 1–10 years; own-country links = 0 |
 | Shifts | Actual lagged family counts of other countries (single step, not BMM's recursive prediction) |
 
-**Consequence:** CN, JP and KR have no estimated shares, so their instrument is empty (`None`). They remain in `pat_appl` and in Block A.
+**Consequence:** CN, JP, KR and IL have no estimated shares, so their instrument is empty (`None`). They remain in `pat_appl` and in Block A.
+
+**IL decision (11 October 2026).** The trial accepts only page size 100, so after Block B (604 requests) only 334 search requests remained, enough for about 30,000 Block C records. Block C as designed needed about 69,000–85,000; 73,240 of the 107,925 cited documents are cited only by IL families. IL stays in `block_B.jsonl`, but Block C covers only documents cited by the other 39 origins. Leftover requests go to IL-only cited documents (`blockC_IL` → `block_C_IL.jsonl`, exploratory, not used by `build`).
 
 ## 4. API facts verified on 11 October 2026
 
@@ -77,7 +80,8 @@ Run these steps in order, reporting after each one.
 3. **`python lens_bmm_pipeline.py blockB`.** Not resumable: if it fails, delete `block_B.jsonl` before rerunning. The first call tests page sizes 1000 → 100; report which size was accepted.
 4. **`python lens_bmm_pipeline.py checkC`.** Report the number of distinct cited documents, the count inside the priority window, and the records left.
    - If Block C is larger than the records left minus 500, **stop**. Propose dropping IL from Block B (about 35,000 records) and ask the researcher.
-5. **`python lens_bmm_pipeline.py blockC`.** Not resumable (same rule as step 3).
+5. **`python lens_bmm_pipeline.py blockC`.** Not resumable (same rule as step 3). Uses the counts saved by `checkC` (`block_C_check.json`) instead of counting again.
+5b. **`python lens_bmm_pipeline.py blockC_IL`** (only after step 5, with the researcher's "yes"). Spends leftover requests on documents cited only by IL families until Lens stops.
 6. **`python lens_bmm_pipeline.py build`** (offline). Output files:
    - `pat_appl.csv`;
    - `shares.csv`;
@@ -89,7 +93,7 @@ Steps 1–5 must finish before 25 October 2026.
 ## 6. Checks before reporting results
 
 - `pat_appl.csv`: 43 countries × 24 years. CD, ET and KH may have zeros.
-- Instrument: non-missing for the 40 Block-B origins, empty for CN, JP and KR.
+- Instrument: non-missing for the 39 share origins, empty for CN, JP, KR and IL.
 - Flag implausible counts for manual review: TJ (925 documents in 1990–1999) and SL (70) look like residence-coding artefacts.
 - `coverage_check.csv`: with full counting, the sum of the country counts can exceed the world total. Report the ratio; do not treat the difference as "missing residence".
 - Families with priority 2022–2023 may still grow in later data.
@@ -100,7 +104,7 @@ Steps 1–5 must finish before 25 October 2026.
 - Full counting of multi-country families.
 - Single-step shift-share using actual lagged foreign counts, not recursive prediction.
 - Origin network limited to 43 countries.
-- CN, JP and KR excluded from share estimation.
+- CN, JP, KR and IL excluded from share estimation (IL for the request budget; see Section 3).
 - Approximate (`cardinality`) family counts.
 
 ## 8. Final report to the researcher
