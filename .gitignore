@@ -1,0 +1,4 @@
+# Raw and derived data (do not commit)
+*.jsonl
+*.csv
+__pycache__/
