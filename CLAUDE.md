@@ -46,6 +46,10 @@ kept for the record only; the IL leftover stage (`blockC_IL`) will not be run.
   income class; not committed). First run (11 October 2026): identification weak (Sanderson-
   Windmeijer F mostly < 5) and Hansen J rejects in (1) and (3) in the main sample; results are
   not yet defensible. Do not tune specifications to obtain significant coefficients.
+  Second run: EF/BIO from `data/gfn_api.csv` (same 128 countries as `gfn.dta`; only
+  `accounts == 1` rows, so the sample ends in 2022). Adding AGE (and TRADE) to the GDP equation
+  does not raise first-stage strength, and Hansen J then rejects in (2) and (3). The shift-share
+  instrument alone is adequate for lnPAT in this sample (F ≈ 11–25 with FE and controls).
 - **Lens files** (`*.jsonl`, `lens_family_counts.csv`, Lens build outputs) are kept; do not delete
   them without asking.
 

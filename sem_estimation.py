@@ -8,6 +8,8 @@ Simultaneous-equations model of income, ecological footprint and patenting (offl
 Endogenous: lnGDP, lnEF, lnPAT. Exogenous: lnCAP, HCI, lnBIO, URB, lnZ (WIPO shift-share
 instrument, mean over lags 1-10). Exclusions: (1) excludes lnBIO, URB, lnZ; (2) excludes lnCAP,
 HCI, lnZ; (3) excludes lnCAP, HCI, lnBIO, URB. Each equation is over-identified.
+Variants (SPECS): +AGE and +AGE+TRADE add regressors to (1) only, i.e. extra excluded
+instruments for lnGDP in (2) and (3).
 
 Estimators (same common sample for all equations, so FE-2SLS and 3SLS are comparable):
   * FE-2SLS equation by equation, country and year dummies, SE clustered by country;
@@ -19,6 +21,7 @@ Data (data/*.dta, supplied by the researcher; levels, logged here):
   GDP  WDI GDP per capita, constant 2015 US$        CAP  WDI gross capital formation, % of GDP
   HCI  PWT human capital index (level)              URB  WDI urban population, % of total
   EF   GFN ecological footprint of consumption per capita (gha); BIO  GFN biocapacity per capita
+       (data/gfn_api.csv, National Footprint Accounts rows only, so the sample ends in 2022)
   PAT  WIPO applications filed abroad (wipo_pat_appl*.csv); lnPAT = ln(1 + PAT)
   Z    wipo_instrument*.csv; lnZ = ln(1 + Z)
 
@@ -34,10 +37,20 @@ from linearmodels.system import IV3SLS
 
 warnings.filterwarnings("ignore")
 
-EXOG_ALL = ["lnCAP", "HCI", "lnBIO", "URB", "lnZ"]
-EQS = {"(1) lnGDP": ("lnGDP", ["lnCAP", "HCI"], ["lnEF", "lnPAT"]),
-       "(2) lnEF": ("lnEF", ["lnBIO", "URB"], ["lnGDP", "lnPAT"]),
-       "(3) lnPAT": ("lnPAT", ["lnZ"], ["lnGDP", "lnEF"])}
+def eqs(gdp_extra=()):
+    """Equations as {name: (dependent, included exogenous, endogenous)}."""
+    return {"(1) lnGDP": ("lnGDP", ["lnCAP", "HCI", *gdp_extra], ["lnEF", "lnPAT"]),
+            "(2) lnEF": ("lnEF", ["lnBIO", "URB"], ["lnGDP", "lnPAT"]),
+            "(3) lnPAT": ("lnPAT", ["lnZ"], ["lnGDP", "lnEF"])}
+
+# Specifications: AGE (age dependency ratio) and lnTRADE (trade, % of GDP) enter the GDP
+# equation only, so they are excluded instruments for lnGDP in (2) and (3). lnTRADE is reported
+# with caution: openness may respond to the footprint (researcher's concern).
+SPECS = {"base": eqs(), "+AGE": eqs(["AGE"]), "+AGE+TRADE": eqs(["AGE", "lnTRADE"])}
+EQS = SPECS["base"]
+
+def exog_all(eq):
+    return list(dict.fromkeys(v for _, inc, _ in eq.values() for v in inc))
 
 def iso2(c3):
     c = pycountry.countries.get(alpha_3=c3)
@@ -47,23 +60,28 @@ def panel(tag="_aa"):
     k = dict(keep_default_na=False, na_values=[""])
     w = pd.read_csv(f"wipo_pat_appl{tag}.csv", **k).merge(
         pd.read_csv(f"wipo_instrument{tag}.csv", **k), on=["country", "year"])
-    g = pd.read_stata("data/gfn.dta").rename(columns={"country_2d": "country"})
+    # GFN API export; keep National Footprint Accounts only (accounts == 1, i.e. up to 2022):
+    # 2023-2025 rows are estimates, not accounts
+    g = pd.read_csv("data/gfn_api.csv", keep_default_na=False, na_values=[""])
+    g = g[(g.accounts == 1) & g.iso2.notna()].rename(columns={
+        "iso2": "country", "EFConsPerCap": "ef", "BiocapPerCap": "bio"})[["country", "year", "ef", "bio"]]
     def by3(f, cols):
         x = pd.read_stata(f"data/{f}.dta")
         x["country"] = x.country_3d.map(iso2)
         return x[["country", "year"] + cols]
     d = (w.merge(g, on=["country", "year"], how="left")
-          .merge(by3("wdi", ["gdp", "cap", "urb"]), on=["country", "year"], how="left")
+          .merge(by3("wdi", ["gdp", "cap", "urb", "age", "trade"]), on=["country", "year"], how="left")
           .merge(by3("pwt", ["hci", "pop"]), on=["country", "year"], how="left")
           .merge(by3("income", ["inc_class"]), on=["country", "year"], how="left"))
     d["lnGDP"], d["lnEF"], d["lnBIO"] = np.log(d.gdp), np.log(d.ef), np.log(d.bio)
     d["lnCAP"], d["HCI"], d["URB"] = np.log(d.cap.where(d.cap > 0)), d.hci, d.urb
     d["lnPAT"], d["lnZ"] = np.log1p(d.pat_abroad), np.log1p(d.z_mean_lag1_10)
     d["lnPATpc"] = np.log1p(d.pat_abroad / d["pop"])           # per million people (robustness)
+    d["AGE"], d["lnTRADE"] = d.age, np.log(d.trade.where(d.trade > 0))
     return d
 
-def common(d):
-    v = ["lnGDP", "lnEF", "lnPAT"] + EXOG_ALL
+def common(d, eq=EQS):
+    v = ["lnGDP", "lnEF", "lnPAT"] + exog_all(eq)
     return d.dropna(subset=v).reset_index(drop=True)
 
 def dummies(d):
@@ -89,33 +107,34 @@ def sw_f(d, fe, y_endog, endog, excl, exog_inc):
         out[j] = fs.wald_test(restriction=R, value=np.zeros(L)).stat / (L - K + 1)
     return out
 
-def run(d, label):
-    d = common(d)
+def run(d, label, eq=EQS, spec="base"):
+    d = common(d, eq)
+    EXOG_ALL = exog_all(eq)
     fe = dummies(d)
     rows, diag = [], []
-    for name, (y, inc, endog) in EQS.items():
+    for name, (y, inc, endog) in eq.items():
         excl = [v for v in EXOG_ALL if v not in inc]
         x = pd.concat([d[inc], fe], axis=1)
         r = IV2SLS(d[y], x, d[endog], d[excl]).fit(cov_type="clustered", clusters=d.country)
         g = IVGMM(d[y], x, d[endog], d[excl]).fit(cov_type="clustered", clusters=d.country)
         for v in inc + endog:
-            rows.append({"sample": label, "method": "FE-2SLS", "equation": name, "var": v,
+            rows.append({"spec": spec, "sample": label, "method": "FE-2SLS", "equation": name, "var": v,
                          "coef": r.params[v], "se": r.std_errors[v], "p": r.pvalues[v]})
         sw = sw_f(d, fe, y, endog, excl, inc)
-        diag.append({"sample": label, "equation": name, "obs": r.nobs,
+        diag.append({"spec": spec, "sample": label, "equation": name, "obs": r.nobs,
                      "countries": d.country.nunique(),
                      **{f"SW_F_{k}": v for k, v in sw.items()},
                      "hansen_J": g.j_stat.stat, "J_p": g.j_stat.pval, "J_df": len(excl) - len(endog)})
     eqs = {}
-    for name, (y, inc, endog) in EQS.items():
+    for name, (y, inc, endog) in eq.items():
         excl = [v for v in EXOG_ALL if v not in inc]
         eqs[name] = {"dependent": d[y], "exog": pd.concat([d[inc], fe], axis=1),
                      "endog": d[endog], "instruments": d[excl]}
     s = IV3SLS(eqs).fit(cov_type="clustered", clusters=d.country.astype("category").cat.codes)
-    for name, (y, inc, endog) in EQS.items():
+    for name, (y, inc, endog) in eq.items():
         for v in inc + endog:
             k = f"{name}_{v}"
-            rows.append({"sample": label, "method": "3SLS", "equation": name, "var": v,
+            rows.append({"spec": spec, "sample": label, "method": "3SLS", "equation": name, "var": v,
                          "coef": s.params[k], "se": s.std_errors[k], "p": s.pvalues[k]})
     return rows, diag
 
@@ -133,10 +152,11 @@ def samples(d):
 def main():
     d = panel()
     rows, diag = [], []
-    for label, s in samples(d).items():
-        r, g = run(s, label)
-        rows += r
-        diag += g
+    for spec, eq in SPECS.items():
+        for label, s in samples(d).items():
+            r, g = run(s, label, eq, spec)
+            rows += r
+            diag += g
     pd.DataFrame(rows).to_csv("sem_results.csv", index=False)
     pd.DataFrame(diag).to_csv("sem_diagnostics.csv", index=False)
 
