@@ -24,6 +24,13 @@ kept for the record only; the IL leftover stage (`blockC_IL`) will not be run.
 - **Known limits:** no instrument for CD, KH and PH (no reported 1990s inflows); OAPI members share
   one office and ARIPO members largely share one, so their instruments are nearly identical;
   very thin shares for MG, NP, ET, MU, MN and IQ; regional membership is current, not historical.
+- **Choices (11 October 2026):** main instrument = mean over lags 1–10 (lag 1 and lag 5 as
+  robustness); main sample keeps all origins with an instrument, with (ii) no thin shares
+  (< 100 foreign filings 1990–1999) and (iii) also no OAPI/ARIPO members as robustness.
+- **First stage (`first_stage.py` → `first_stage_results.csv`):** two-way FE, SE clustered by
+  country. With CN/JP/KR (93% of `pat_abroad`) the instrument is weak (F ≈ 4–6) and PPML has the
+  wrong sign. Without CN/JP/KR: PPML F ≈ 40–46 in samples (i)–(ii); OLS-log F ≈ 5 in (i),
+  11–19 in (ii); sample (iii) has only 12 clusters, so its F is unreliable.
 - **Lens files** (`*.jsonl`, `lens_family_counts.csv`, Lens build outputs) are kept; do not delete
   them without asking.
 
